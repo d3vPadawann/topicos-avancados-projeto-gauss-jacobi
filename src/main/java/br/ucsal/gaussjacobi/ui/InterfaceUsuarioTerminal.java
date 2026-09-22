@@ -278,7 +278,7 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
     }
 
     private String formatarResposta(BigDecimal valor) {
-        return valor.setScale(CASAS_DECIMAIS_DA_RESPOSTA, RoundingMode.DOWN).toPlainString();
+        return valor.setScale(CASAS_DECIMAIS_DA_RESPOSTA, RoundingMode.HALF_UP).toPlainString();
     }
 
     private String removerAcentos(String texto) {

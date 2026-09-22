@@ -68,8 +68,8 @@ class InterfaceUsuarioTerminalTest {
                 "\\s+1\\s+0\\.25\\s+0\\.6666666666666666666666666666666667\\s+0\\.6666666666666666666666666666666667"));
         assertTrue(linhaDaTabela(saida, "0").matches("\\s+0\\s+0\\s+0\\s+-"));
         assertTrue(saida.contains("Solucao encontrada:"));
-        assertTrue(saida.contains("x1 = 0.099999"));
-        assertTrue(saida.contains("x2 = 0.599999"));
+        assertTrue(saida.contains("x1 = 0.100000"));
+        assertTrue(saida.contains("x2 = 0.600000"));
         assertFalse(saida.contains("reordenadas"));
     }
 
