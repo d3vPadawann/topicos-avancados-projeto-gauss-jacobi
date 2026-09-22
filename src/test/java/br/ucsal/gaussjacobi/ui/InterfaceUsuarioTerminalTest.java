@@ -40,8 +40,8 @@ class InterfaceUsuarioTerminalTest {
         assertEquals(0, problema.orElseThrow().matrizA()[0][0].compareTo(new BigDecimal("4")));
         assertEquals(0, problema.orElseThrow().tolerancia().compareTo(new BigDecimal("1E-25")));
         assertEquals(10, problema.orElseThrow().iteracoesMaximas());
-        assertTrue(saida.toString().contains("Valor inválido"));
-        assertTrue(saida.toString().contains("Quantidade inválida"));
+        assertTrue(saida.toString().contains("Valor invalido"));
+        assertTrue(saida.toString().contains("Quantidade invalida"));
     }
 
     @Test
@@ -62,14 +62,14 @@ class InterfaceUsuarioTerminalTest {
 
         assertTrue(saida.contains("alfa1 = 0.25"));
         assertTrue(saida.contains("alfa2 = 0.6666666666666666666666666666666667"));
-        assertTrue(saida.contains("a convergência é garantida"));
-        assertTrue(saida.contains("Iterações (erro = maior |x(k) - x(k-1)|):"));
+        assertTrue(saida.contains("a convergencia e garantida"));
+        assertTrue(saida.contains("Iteracoes (erro = maior |x(k) - x(k-1)|):"));
         assertTrue(linhaDaTabela(saida, "1").matches(
                 "\\s+1\\s+0\\.25\\s+0\\.6666666666666666666666666666666667\\s+0\\.6666666666666666666666666666666667"));
         assertTrue(linhaDaTabela(saida, "0").matches("\\s+0\\s+0\\s+0\\s+-"));
-        assertTrue(saida.contains("Solução encontrada:"));
-        assertTrue(saida.contains("x1 = 0.100000"));
-        assertTrue(saida.contains("x2 = 0.600000"));
+        assertTrue(saida.contains("Solucao encontrada:"));
+        assertTrue(saida.contains("x1 = 0.099999"));
+        assertTrue(saida.contains("x2 = 0.599999"));
         assertFalse(saida.contains("reordenadas"));
     }
 
@@ -81,7 +81,7 @@ class InterfaceUsuarioTerminalTest {
                 "1E-6",
                 100));
 
-        assertTrue(saida.contains("As equações foram reordenadas"));
+        assertTrue(saida.contains("As equacoes foram reordenadas"));
         assertTrue(saida.contains("Nova ordem: E2 E1"));
         assertTrue(saida.contains("x1 = 1.000000"));
     }
@@ -94,9 +94,9 @@ class InterfaceUsuarioTerminalTest {
                 "1E-6",
                 1000));
 
-        assertTrue(saida.contains("alfa máximo = 4"));
-        assertTrue(saida.contains("a convergência não é garantida"));
-        assertTrue(saida.contains("O método divergiu"));
+        assertTrue(saida.contains("alfa maximo = 4"));
+        assertTrue(saida.contains("a convergencia nao e garantida"));
+        assertTrue(saida.contains("O metodo divergiu"));
         assertFalse(saida.contains("E+"));
     }
 
@@ -108,9 +108,19 @@ class InterfaceUsuarioTerminalTest {
                 "1E-30",
                 3));
 
-        assertTrue(saida.contains("não convergiu"));
-        assertTrue(saida.contains("Última aproximação calculada:"));
+        assertTrue(saida.contains("nao convergiu"));
+        assertTrue(saida.contains("Ultima aproximacao calculada:"));
         assertTrue(saida.contains("x2 = 2.000000"));
+    }
+
+    @Test
+    void removeAcentosDeMensagensDeErro() {
+        StringWriter saida = new StringWriter();
+        InterfaceUsuarioTerminal terminal = new InterfaceUsuarioTerminal(new StringReader(""), saida);
+
+        terminal.exibirErro("Não há solução possível.");
+
+        assertTrue(saida.toString().contains("Nao ha solucao possivel."));
     }
 
     private String linhaDaTabela(String saida, String iteracao) {
