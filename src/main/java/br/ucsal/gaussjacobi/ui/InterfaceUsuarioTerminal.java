@@ -5,7 +5,6 @@ import br.ucsal.gaussjacobi.domain.IteracaoGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ProblemaGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ResultadoGaussJacobi;
 import br.ucsal.gaussjacobi.exception.FalhaInterfaceUsuarioException;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +17,7 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -54,20 +54,20 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
             BigDecimal[][] matriz = new BigDecimal[tamanho][tamanho];
             for (int linha = 0; linha < tamanho; linha++) {
                 matriz[linha] = lerVetor(
-                        "Linha " + (linha + 1) + " da matriz A (valores separados por espaço): ",
+                        "Linha " + (linha + 1) + " da matriz A (valores separados por espaco): ",
                         tamanho);
             }
 
-            BigDecimal[] vetor = lerVetor("Vetor B (valores separados por espaço): ", tamanho);
-            BigDecimal[] chute = lerVetor("Chute inicial (valores separados por espaço): ", tamanho);
-            BigDecimal tolerancia = lerDecimalPositivo("Tolerância: ");
-            int iteracoes = lerInteiroPositivo("Máximo de iterações: ");
+            BigDecimal[] vetor = lerVetor("Vetor B (valores separados por espaco): ", tamanho);
+            BigDecimal[] chute = lerVetor("Chute inicial (valores separados por espaco): ", tamanho);
+            BigDecimal tolerancia = lerDecimalPositivo("Tolerancia: ");
+            int iteracoes = lerInteiroPositivo("Maximo de iteracoes: ");
 
             return Optional.of(new ProblemaGaussJacobi(matriz, vetor, chute, tolerancia, iteracoes));
         } catch (FimDaEntradaException excecao) {
             return Optional.empty();
         } catch (IOException excecao) {
-            throw new FalhaInterfaceUsuarioException("Não foi possível ler os dados de entrada.", excecao);
+            throw new FalhaInterfaceUsuarioException("Nao foi possivel ler os dados de entrada.", excecao);
         }
     }
 
@@ -84,7 +84,7 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
 
     private void exibirReordenacao(ResultadoGaussJacobi resultado) {
         saida.println();
-        saida.println("As equações foram reordenadas para colocar os maiores coeficientes na diagonal principal.");
+        saida.println("As equacoes foram reordenadas para colocar os maiores coeficientes na diagonal principal.");
         StringBuilder novaOrdem = new StringBuilder("Nova ordem:");
         for (int equacaoOriginal : resultado.ordemDasEquacoes()) {
             novaOrdem.append(" E").append(equacaoOriginal + 1);
@@ -108,23 +108,23 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
 
     private void exibirCriterioDasLinhas(AnaliseCriterioDasLinhas analise) {
         saida.println();
-        saida.println("Critério das linhas (alfa = soma dos |coeficientes fora da diagonal| / |coeficiente da diagonal|):");
+        saida.println("Criterio das linhas (alfa = soma dos |coeficientes fora da diagonal| / |coeficiente da diagonal|):");
         BigDecimal[] alfas = analise.alfas();
         for (int linha = 0; linha < alfas.length; linha++) {
             saida.println("  alfa" + (linha + 1) + " = " + formatarCompleto(alfas[linha]));
         }
-        saida.println("  alfa máximo = " + formatarCompleto(analise.alfaMaximo()));
+        saida.println("  alfa maximo = " + formatarCompleto(analise.alfaMaximo()));
         if (analise.garanteConvergencia()) {
-            saida.println("Critério satisfeito (alfa máximo < 1): a convergência é garantida.");
+            saida.println("Criterio satisfeito (alfa maximo < 1): a convergencia e garantida.");
         } else {
-            saida.println("Critério NÃO satisfeito (alfa máximo >= 1): a convergência não é garantida.");
-            saida.println("O método ainda pode convergir, mas também pode divergir.");
+            saida.println("Criterio NAO satisfeito (alfa maximo >= 1): a convergencia nao e garantida.");
+            saida.println("O metodo ainda pode convergir, mas tambem pode divergir.");
         }
     }
 
     private void exibirIteracoes(List<IteracaoGaussJacobi> iteracoes) {
         saida.println();
-        saida.println("Iterações (erro = maior |x(k) - x(k-1)|):");
+        saida.println("Iteracoes (erro = maior |x(k) - x(k-1)|):");
         int quantidadeDeIncognitas = iteracoes.getFirst().aproximacao().length;
         List<String[]> linhasDaTabela = new ArrayList<>();
 
@@ -170,14 +170,14 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
     private void exibirConclusao(ResultadoGaussJacobi resultado) {
         saida.println();
         switch (resultado.situacao()) {
-            case CONVERGIU -> saida.println("Solução encontrada:");
+            case CONVERGIU -> saida.println("Solucao encontrada:");
             case NAO_CONVERGIU -> {
-                saida.println("O método não convergiu dentro do limite de iterações.");
-                saida.println("Última aproximação calculada:");
+                saida.println("O metodo nao convergiu dentro do limite de iteracoes.");
+                saida.println("Ultima aproximacao calculada:");
             }
             case DIVERGIU -> {
-                saida.println("O método divergiu: o erro cresce a cada iteração e os valores se afastam da solução.");
-                saida.println("Última aproximação calculada:");
+                saida.println("O metodo divergiu: o erro cresce a cada iteracao e os valores se afastam da solucao.");
+                saida.println("Ultima aproximacao calculada:");
             }
         }
 
@@ -186,13 +186,13 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
             saida.println("x" + (indice + 1) + " = " + formatarResposta(solucao[indice]));
         }
 
-        saida.println("Iterações realizadas: " + resultado.iteracoesRealizadas());
-        saida.println("Erro máximo: " + formatarCompleto(resultado.erroMaximo()));
+        saida.println("Iteracoes realizadas: " + resultado.iteracoesRealizadas());
+        saida.println("Erro maximo: " + formatarCompleto(resultado.erroMaximo()));
     }
 
     @Override
     public void exibirErro(String mensagem) {
-        saida.println("Erro: " + mensagem);
+        saida.println("Erro: " + removerAcentos(mensagem));
         saida.flush();
     }
 
@@ -204,15 +204,15 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
                 if (resposta.equals("s") || resposta.equals("sim")) {
                     return true;
                 }
-                if (resposta.equals("n") || resposta.equals("não") || resposta.equals("nao")) {
+                if (resposta.equals("n") || resposta.equals("nao")) {
                     return false;
                 }
-                saida.println("Resposta inválida. Digite s ou n.");
+                saida.println("Resposta invalida. Digite s ou n.");
             }
         } catch (FimDaEntradaException excecao) {
             return false;
         } catch (IOException excecao) {
-            throw new FalhaInterfaceUsuarioException("Não foi possível ler a resposta do usuário.", excecao);
+            throw new FalhaInterfaceUsuarioException("Nao foi possivel ler a resposta do usuario.", excecao);
         }
     }
 
@@ -225,10 +225,10 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
                     return numero;
                 }
             } catch (NumberFormatException excecao) {
-                saida.println("Valor inválido. Digite um número inteiro maior que zero.");
+                saida.println("Valor invalido. Digite um numero inteiro maior que zero.");
                 continue;
             }
-            saida.println("Valor inválido. Digite um número inteiro maior que zero.");
+            saida.println("Valor invalido. Digite um numero inteiro maior que zero.");
         }
     }
 
@@ -241,10 +241,10 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
                     return numero;
                 }
             } catch (NumberFormatException excecao) {
-                saida.println("Valor inválido. Digite um número decimal maior que zero.");
+                saida.println("Valor invalido. Digite um numero decimal maior que zero.");
                 continue;
             }
-            saida.println("Valor inválido. Digite um número decimal maior que zero.");
+            saida.println("Valor invalido. Digite um numero decimal maior que zero.");
         }
     }
 
@@ -253,7 +253,7 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
             String linha = lerLinha(mensagem).trim();
             String[] valores = linha.isEmpty() ? new String[0] : linha.split("\\s+");
             if (valores.length != tamanho) {
-                saida.println("Quantidade inválida. Informe exatamente " + tamanho + " valores.");
+                saida.println("Quantidade invalida. Informe exatamente " + tamanho + " valores.");
                 continue;
             }
 
@@ -264,7 +264,7 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
                 }
                 return vetor;
             } catch (NumberFormatException excecao) {
-                saida.println("Valor inválido. Informe apenas números decimais separados por espaço.");
+                saida.println("Valor invalido. Informe apenas numeros decimais separados por espaco.");
             }
         }
     }
@@ -278,7 +278,11 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
     }
 
     private String formatarResposta(BigDecimal valor) {
-        return valor.setScale(CASAS_DECIMAIS_DA_RESPOSTA, RoundingMode.HALF_UP).toPlainString();
+        return valor.setScale(CASAS_DECIMAIS_DA_RESPOSTA, RoundingMode.DOWN).toPlainString();
+    }
+
+    private String removerAcentos(String texto) {
+        return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
 
     private String lerLinha(String mensagem) throws IOException, FimDaEntradaException {
