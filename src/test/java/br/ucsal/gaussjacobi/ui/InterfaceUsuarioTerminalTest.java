@@ -39,8 +39,8 @@ class InterfaceUsuarioTerminalTest {
         assertEquals(0, problema.orElseThrow().matrizA()[0][0].compareTo(new BigDecimal("4")));
         assertEquals(0, problema.orElseThrow().tolerancia().compareTo(new BigDecimal("1E-25")));
         assertEquals(10, problema.orElseThrow().iteracoesMaximas());
-        assertTrue(saida.toString().contains("Valor inválido"));
-        assertTrue(saida.toString().contains("Quantidade inválida"));
+        assertTrue(saida.toString().contains("Valor invalido"));
+        assertTrue(saida.toString().contains("Quantidade invalida"));
     }
 
     @Test
@@ -52,7 +52,17 @@ class InterfaceUsuarioTerminalTest {
     }
 
     @Test
-    void apresentaTodaAPrecisaoDoResultado() {
+    void removeAcentosDeMensagensDeErro() {
+        StringWriter saida = new StringWriter();
+        InterfaceUsuarioTerminal terminal = new InterfaceUsuarioTerminal(new StringReader(""), saida);
+
+        terminal.exibirErro("Não há solução possível.");
+
+        assertTrue(saida.toString().contains("Nao ha solucao possivel."));
+    }
+
+    @Test
+    void truncaResultadoEmSeisCasasDecimais() {
         StringWriter saida = new StringWriter();
         InterfaceUsuarioTerminal terminal = new InterfaceUsuarioTerminal(new StringReader(""), saida);
         BigDecimal valorPreciso = new BigDecimal("0.1234567890123456789012345678901234");
@@ -68,8 +78,8 @@ class InterfaceUsuarioTerminalTest {
                 BigDecimal.ONE,
                 false));
 
-        assertTrue(saida.toString().contains(valorPreciso.toPlainString()));
+        assertTrue(saida.toString().contains("x1 = 0.123456"));
         assertTrue(saida.toString().contains("1E-30"));
-        assertTrue(saida.toString().contains("não convergiu"));
+        assertTrue(saida.toString().contains("nao convergiu"));
     }
 }
