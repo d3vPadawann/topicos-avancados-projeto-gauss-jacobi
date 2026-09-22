@@ -1,5 +1,7 @@
 package br.ucsal.gaussjacobi.ui;
 
+import br.ucsal.gaussjacobi.domain.AnaliseCriterioDasLinhas;
+import br.ucsal.gaussjacobi.domain.IteracaoGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ProblemaGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ResultadoGaussJacobi;
 import br.ucsal.gaussjacobi.exception.FalhaInterfaceUsuarioException;
@@ -16,13 +18,16 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
 public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
 
-    private static final int SCALE = 6;
+    private static final int CASAS_DECIMAIS_DA_RESPOSTA = 6;
+    private static final String SEPARADOR_DE_COLUNAS = "   ";
 
     private final BufferedReader entrada;
     private final PrintWriter saida;
@@ -68,22 +73,121 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
 
     @Override
     public void exibirResultado(ResultadoGaussJacobi resultado) {
+        if (resultado.equacoesForamReordenadas()) {
+            exibirReordenacao(resultado);
+        }
+        exibirCriterioDasLinhas(resultado.criterioDasLinhas());
+        exibirIteracoes(resultado.iteracoes());
+        exibirConclusao(resultado);
+        saida.flush();
+    }
+
+    private void exibirReordenacao(ResultadoGaussJacobi resultado) {
         saida.println();
-        if (resultado.convergiu()) {
-            saida.println("Solucao encontrada:");
+        saida.println("As equacoes foram reordenadas para colocar os maiores coeficientes na diagonal principal.");
+        StringBuilder novaOrdem = new StringBuilder("Nova ordem:");
+        for (int equacaoOriginal : resultado.ordemDasEquacoes()) {
+            novaOrdem.append(" E").append(equacaoOriginal + 1);
+        }
+        saida.println(novaOrdem);
+        saida.println("Sistema utilizado:");
+
+        BigDecimal[][] matriz = resultado.matrizUtilizada();
+        BigDecimal[] vetor = resultado.vetorUtilizado();
+        List<String[]> linhasDoSistema = new ArrayList<>();
+        for (int linha = 0; linha < matriz.length; linha++) {
+            String[] celulas = new String[matriz.length + 1];
+            for (int coluna = 0; coluna < matriz.length; coluna++) {
+                celulas[coluna] = formatarCompleto(matriz[linha][coluna]) + "*x" + (coluna + 1);
+            }
+            celulas[matriz.length] = "= " + formatarCompleto(vetor[linha]);
+            linhasDoSistema.add(celulas);
+        }
+        exibirTabela(linhasDoSistema);
+    }
+
+    private void exibirCriterioDasLinhas(AnaliseCriterioDasLinhas analise) {
+        saida.println();
+        saida.println("Criterio das linhas (alfa = soma dos |coeficientes fora da diagonal| / |coeficiente da diagonal|):");
+        BigDecimal[] alfas = analise.alfas();
+        for (int linha = 0; linha < alfas.length; linha++) {
+            saida.println("  alfa" + (linha + 1) + " = " + formatarCompleto(alfas[linha]));
+        }
+        saida.println("  alfa maximo = " + formatarCompleto(analise.alfaMaximo()));
+        if (analise.garanteConvergencia()) {
+            saida.println("Criterio satisfeito (alfa maximo < 1): a convergencia e garantida.");
         } else {
-            saida.println("O metodo nao convergiu dentro do limite de iteracoes.");
-            saida.println("Ultima aproximacao calculada:");
+            saida.println("Criterio NAO satisfeito (alfa maximo >= 1): a convergencia nao e garantida.");
+            saida.println("O metodo ainda pode convergir, mas tambem pode divergir.");
+        }
+    }
+
+    private void exibirIteracoes(List<IteracaoGaussJacobi> iteracoes) {
+        saida.println();
+        saida.println("Iteracoes (erro = maior |x(k) - x(k-1)|):");
+        int quantidadeDeIncognitas = iteracoes.getFirst().aproximacao().length;
+        List<String[]> linhasDaTabela = new ArrayList<>();
+
+        String[] cabecalho = new String[quantidadeDeIncognitas + 2];
+        cabecalho[0] = "k";
+        for (int indice = 0; indice < quantidadeDeIncognitas; indice++) {
+            cabecalho[indice + 1] = "x" + (indice + 1);
+        }
+        cabecalho[quantidadeDeIncognitas + 1] = "erro";
+        linhasDaTabela.add(cabecalho);
+
+        for (IteracaoGaussJacobi iteracao : iteracoes) {
+            String[] celulas = new String[quantidadeDeIncognitas + 2];
+            celulas[0] = String.valueOf(iteracao.numero());
+            BigDecimal[] aproximacao = iteracao.aproximacao();
+            for (int indice = 0; indice < quantidadeDeIncognitas; indice++) {
+                celulas[indice + 1] = formatarCompleto(aproximacao[indice]);
+            }
+            celulas[quantidadeDeIncognitas + 1] = iteracao.erro().map(this::formatarCompleto).orElse("-");
+            linhasDaTabela.add(celulas);
+        }
+        exibirTabela(linhasDaTabela);
+    }
+
+    private void exibirTabela(List<String[]> linhas) {
+        int[] larguras = new int[linhas.getFirst().length];
+        for (String[] celulas : linhas) {
+            for (int coluna = 0; coluna < celulas.length; coluna++) {
+                larguras[coluna] = Math.max(larguras[coluna], celulas[coluna].length());
+            }
+        }
+
+        for (String[] celulas : linhas) {
+            StringBuilder linha = new StringBuilder();
+            for (int coluna = 0; coluna < celulas.length; coluna++) {
+                linha.append(SEPARADOR_DE_COLUNAS).append(" ".repeat(larguras[coluna] - celulas[coluna].length()))
+                        .append(celulas[coluna]);
+            }
+            saida.println(linha);
+        }
+    }
+
+    private void exibirConclusao(ResultadoGaussJacobi resultado) {
+        saida.println();
+        switch (resultado.situacao()) {
+            case CONVERGIU -> saida.println("Solucao encontrada:");
+            case NAO_CONVERGIU -> {
+                saida.println("O metodo nao convergiu dentro do limite de iteracoes.");
+                saida.println("Ultima aproximacao calculada:");
+            }
+            case DIVERGIU -> {
+                saida.println("O metodo divergiu: o erro cresce a cada iteracao e os valores se afastam da solucao.");
+                saida.println("Ultima aproximacao calculada:");
+            }
         }
 
         BigDecimal[] solucao = resultado.solucao();
         for (int indice = 0; indice < solucao.length; indice++) {
-            saida.println("x" + (indice + 1) + " = " + formatar(solucao[indice]));
+            saida.println("x" + (indice + 1) + " = " + formatarResposta(solucao[indice]));
         }
 
         saida.println("Iteracoes realizadas: " + resultado.iteracoesRealizadas());
-        saida.println("Erro maximo: " + resultado.erroMaximo().stripTrailingZeros().toEngineeringString());
-        saida.flush();
+        saida.println("Erro maximo: " + formatarCompleto(resultado.erroMaximo()));
     }
 
     @Override
@@ -169,11 +273,12 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
         return new BigDecimal(valor.replace(',', '.'));
     }
 
-    private String formatar(BigDecimal valor) {
-        return valor
-            .setScale(SCALE, RoundingMode.DOWN)
-            .stripTrailingZeros()
-            .toPlainString();
+    private String formatarCompleto(BigDecimal valor) {
+        return valor.stripTrailingZeros().toPlainString();
+    }
+
+    private String formatarResposta(BigDecimal valor) {
+        return valor.setScale(CASAS_DECIMAIS_DA_RESPOSTA, RoundingMode.HALF_UP).toPlainString();
     }
 
     private String removerAcentos(String texto) {

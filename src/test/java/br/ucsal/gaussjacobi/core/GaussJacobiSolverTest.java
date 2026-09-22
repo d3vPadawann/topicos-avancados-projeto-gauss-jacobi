@@ -1,13 +1,19 @@
 package br.ucsal.gaussjacobi.core;
 
+import br.ucsal.gaussjacobi.domain.AnaliseCriterioDasLinhas;
+import br.ucsal.gaussjacobi.domain.IteracaoGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ProblemaGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ResultadoGaussJacobi;
+import br.ucsal.gaussjacobi.domain.SituacaoConvergencia;
 import br.ucsal.gaussjacobi.exception.DadosMatematicosInvalidosException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.util.Arrays;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,7 +60,7 @@ class GaussJacobiSolverTest {
     @Test
     void retornaResultadoQuandoNaoConverge() {
         ProblemaGaussJacobi problema = new ProblemaGaussJacobi(
-                matriz(new String[]{"1", "2"}, new String[]{"2", "1"}),
+                matriz(new String[]{"1", "2"}, new String[]{"1", "1"}),
                 vetor("1", "1"),
                 vetor("0", "0"),
                 decimal("1E-30"),
@@ -63,9 +69,115 @@ class GaussJacobiSolverTest {
         ResultadoGaussJacobi resultado = solver.resolver(problema);
 
         assertFalse(resultado.convergiu());
+        assertEquals(SituacaoConvergencia.NAO_CONVERGIU, resultado.situacao());
         assertEquals(3, resultado.iteracoesRealizadas());
-        assertEquals(0, resultado.solucao()[0].compareTo(decimal("3")));
-        assertEquals(0, resultado.solucao()[1].compareTo(decimal("3")));
+        assertEquals(0, resultado.solucao()[0].compareTo(decimal("1")));
+        assertEquals(0, resultado.solucao()[1].compareTo(decimal("2")));
+    }
+
+    @Test
+    void registraCadaIteracaoAPartirDoChuteInicial() {
+        ProblemaGaussJacobi problema = new ProblemaGaussJacobi(
+                matriz(new String[]{"4", "1"}, new String[]{"2", "3"}),
+                vetor("1", "2"),
+                vetor("0", "0"),
+                decimal("1E-6"),
+                100);
+
+        ResultadoGaussJacobi resultado = solver.resolver(problema);
+        List<IteracaoGaussJacobi> iteracoes = resultado.iteracoes();
+
+        assertEquals(resultado.iteracoesRealizadas() + 1, iteracoes.size());
+        assertEquals(0, iteracoes.getFirst().numero());
+        assertTrue(iteracoes.getFirst().erro().isEmpty());
+        assertEquals(0, iteracoes.get(1).aproximacao()[0].compareTo(decimal("0.25")));
+        assertEquals(0, iteracoes.get(1).erroMaximo().compareTo(decimal("0.6666666666666666666666666666666667")));
+    }
+
+    @Test
+    void mantemOrdemQuandoCriterioDasLinhasJaEhSatisfeito() {
+        ResultadoGaussJacobi resultado = solver.resolver(sistemaDominante(
+                matriz(new String[]{"10", "2", "1"}, new String[]{"1", "5", "1"}, new String[]{"2", "3", "10"}),
+                vetor("7", "-8", "6")));
+
+        assertFalse(resultado.equacoesForamReordenadas());
+        assertArrayEquals(new int[]{0, 1, 2}, resultado.ordemDasEquacoes());
+    }
+
+    @Test
+    void reordenaEquacoesParaObterDiagonalDominante() {
+        ResultadoGaussJacobi resultado = solver.resolver(sistemaDominante(
+                matriz(new String[]{"1", "5", "1"}, new String[]{"2", "3", "10"}, new String[]{"10", "2", "1"}),
+                vetor("-8", "6", "7")));
+
+        assertTrue(resultado.equacoesForamReordenadas());
+        assertArrayEquals(new int[]{2, 0, 1}, resultado.ordemDasEquacoes());
+        assertEquals(0, resultado.vetorUtilizado()[0].compareTo(decimal("7")));
+        assertTrue(resultado.criterioDasLinhas().garanteConvergencia());
+        assertTrue(resultado.convergiu());
+        assertDecimalProximo(decimal("1"), resultado.solucao()[0], decimal("1E-9"));
+        assertDecimalProximo(decimal("-2"), resultado.solucao()[1], decimal("1E-9"));
+        assertDecimalProximo(decimal("1"), resultado.solucao()[2], decimal("1E-9"));
+    }
+
+    @Test
+    void reordenaEquacoesQuandoDiagonalPossuiZero() {
+        ResultadoGaussJacobi resultado = solver.resolver(sistemaDominante(
+                matriz(new String[]{"0", "1"}, new String[]{"1", "1"}),
+                vetor("1", "2")));
+
+        assertArrayEquals(new int[]{1, 0}, resultado.ordemDasEquacoes());
+        assertTrue(resultado.convergiu());
+        assertDecimalProximo(decimal("1"), resultado.solucao()[0], decimal("1E-9"));
+        assertDecimalProximo(decimal("1"), resultado.solucao()[1], decimal("1E-9"));
+    }
+
+    @Test
+    void rejeitaQuandoNenhumaOrdemEliminaZeroDaDiagonal() {
+        ProblemaGaussJacobi problema = sistemaDominante(
+                matriz(new String[]{"0", "1"}, new String[]{"0", "1"}),
+                vetor("1", "2"));
+
+        DadosMatematicosInvalidosException excecao =
+                assertThrows(DadosMatematicosInvalidosException.class, () -> solver.resolver(problema));
+        assertTrue(excecao.getMessage().contains("diagonal"));
+    }
+
+    @Test
+    void calculaCriterioDasLinhas() {
+        ResultadoGaussJacobi resultado = solver.resolver(sistemaDominante(
+                matriz(new String[]{"10", "2", "1"}, new String[]{"1", "5", "1"}, new String[]{"2", "3", "10"}),
+                vetor("7", "-8", "6")));
+        AnaliseCriterioDasLinhas analise = resultado.criterioDasLinhas();
+
+        assertEquals(0, analise.alfas()[0].compareTo(decimal("0.3")));
+        assertEquals(0, analise.alfas()[1].compareTo(decimal("0.4")));
+        assertEquals(0, analise.alfas()[2].compareTo(decimal("0.5")));
+        assertEquals(0, analise.alfaMaximo().compareTo(decimal("0.5")));
+        assertTrue(analise.garanteConvergencia());
+    }
+
+    @Test
+    void detectaDivergenciaAntesDoLimiteDeIteracoes() {
+        ProblemaGaussJacobi problema = new ProblemaGaussJacobi(
+                matriz(new String[]{"1", "2", "2"}, new String[]{"2", "1", "2"}, new String[]{"2", "2", "1"}),
+                vetor("5", "5", "5"),
+                vetor("0", "0", "0"),
+                decimal("1E-6"),
+                1000);
+
+        ResultadoGaussJacobi resultado = solver.resolver(problema);
+
+        assertFalse(resultado.criterioDasLinhas().garanteConvergencia());
+        assertEquals(0, resultado.criterioDasLinhas().alfaMaximo().compareTo(decimal("4")));
+        assertEquals(SituacaoConvergencia.DIVERGIU, resultado.situacao());
+        assertTrue(resultado.iteracoesRealizadas() < 1000);
+    }
+
+    private ProblemaGaussJacobi sistemaDominante(BigDecimal[][] matriz, BigDecimal[] vetor) {
+        BigDecimal[] chute = new BigDecimal[vetor.length];
+        Arrays.fill(chute, BigDecimal.ZERO);
+        return new ProblemaGaussJacobi(matriz, vetor, chute, decimal("1E-12"), 200);
     }
 
     @Test
