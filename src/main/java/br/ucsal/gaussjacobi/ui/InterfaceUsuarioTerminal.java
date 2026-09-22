@@ -14,12 +14,15 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
 public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
+
+    private static final int SCALE = 6;
 
     private final BufferedReader entrada;
     private final PrintWriter saida;
@@ -167,7 +170,9 @@ public final class InterfaceUsuarioTerminal implements InterfaceUsuario {
     }
 
     private String formatar(BigDecimal valor) {
-        return valor.stripTrailingZeros().toPlainString();
+        return valor
+            .setScale(SCALE, RoundingMode.HALF_UP)
+            .stripTrailingZeros().toPlainString();
     }
 
     private String lerLinha(String mensagem) throws IOException, FimDaEntradaException {
