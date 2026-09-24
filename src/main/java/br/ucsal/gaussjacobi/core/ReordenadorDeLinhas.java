@@ -1,6 +1,7 @@
 package br.ucsal.gaussjacobi.core;
 
 import br.ucsal.gaussjacobi.exception.DadosMatematicosInvalidosException;
+import br.ucsal.gaussjacobi.exception.DiagonalNulaException;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ public final class ReordenadorDeLinhas {
             return ordemSemZeroNaDiagonal;
         }
 
-        throw new DadosMatematicosInvalidosException(
+        throw new DiagonalNulaException(
                 "A diagonal principal contém zero e nenhuma troca de ordem das equações consegue eliminá-lo.");
     }
 

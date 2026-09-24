@@ -6,6 +6,7 @@ import br.ucsal.gaussjacobi.domain.ProblemaGaussJacobi;
 import br.ucsal.gaussjacobi.domain.ResultadoGaussJacobi;
 import br.ucsal.gaussjacobi.domain.SituacaoConvergencia;
 import br.ucsal.gaussjacobi.exception.DadosMatematicosInvalidosException;
+import br.ucsal.gaussjacobi.exception.DiagonalNulaException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -138,8 +139,8 @@ class GaussJacobiSolverTest {
                 matriz(new String[]{"0", "1"}, new String[]{"0", "1"}),
                 vetor("1", "2"));
 
-        DadosMatematicosInvalidosException excecao =
-                assertThrows(DadosMatematicosInvalidosException.class, () -> solver.resolver(problema));
+        DiagonalNulaException excecao =
+                assertThrows(DiagonalNulaException.class, () -> solver.resolver(problema));
         assertTrue(excecao.getMessage().contains("diagonal"));
     }
 
